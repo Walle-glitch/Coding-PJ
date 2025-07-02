@@ -1,0 +1,62 @@
+vendor: Dell
+template_style: OS6
+interface_prefix: TenGigabitEthernet or GigabitEthernet
+supports_vlan_interface: true
+supports_stp: true
+supports_loopback: true
+supports_enable_password: true
+
+
+logging:
+  hosts:
+    - 192.0.2.100
+  level: informational
+
+snmp:
+  community: public
+  contact: admin@example.com
+
+stp:
+  enabled: true
+  priority: 4096
+  mode: rapid-pvst
+
+
+
+# It should be iterated or something so that it can handle multiple interfaces with different names and different configurations.
+# below is an "typed" version of the interfaces section, and it should be used to generate the interfaces section in the config file.
+
+interfaces:
+  - name: Gi1/0/1 
+    description: Access VLAN port
+    mode: access
+    vlan: 10
+    no_shutdown: true
+    spanningtree: portfast
+
+  - name: Gi1/0/2
+    description: Trunk to AP
+    mode: trunk
+    allowed_vlans: 10,20
+    no_shutdown: true
+    spanningtree: none
+
+  - name: [Gi1/0/3, TenGigabitEthernet1/0/3]
+    description: Uplink to Core
+    mode: trunk
+    allowed_vlans: 10,20,30
+    no_shutdown: true
+    spanningtree: none
+
+  - name: Gi1/0/4
+    description: Parking Lot
+    mode: access
+    vlan: 999
+    no_shutdown: false
+    spanningtree: none
+
+loopbacks:
+  - id: 0
+    description: Loopback Interface
+    ip_address: null
+

@@ -1,0 +1,82 @@
+acl:
+  - name: BLOCK_WEBSITES
+    rules:
+      - action: deny
+        dst: 192.0.2.1
+        port: 80
+        protocol: tcp
+      - action: permit
+        dst: any
+        protocol: ip
+
+dns:
+  domain_name: example.local
+  servers:
+    - 8.8.8.8
+    - 8.8.4.4
+
+logging:
+  hosts:
+    - 192.0.2.100
+  level: informational
+
+ntp:
+  servers:
+    - 0.pool.ntp.org
+    - 1.pool.ntp.org
+
+ospf:
+  process_id: 1
+  networks:
+    - 192.168.10.0 0.0.0.255 area 0
+
+ssh:
+  username: admin
+
+stp:
+  enabled: true
+  priority: 4096
+
+snmp:
+  community: public
+  contact: admin@example.com
+  location: DC1
+
+regions:
+  eu:
+    ntp:
+      servers:
+        - 0.eu.pool.ntp.org
+        - 1.eu.pool.ntp.org
+    tacacs:
+      servers:
+        - 192.0.2.200
+  ap:
+    ntp:
+      servers:
+        - 0.asia.pool.ntp.org
+        - 1.asia.pool.ntp.org
+    tacacs:
+      servers:
+        - 203.0.113.10
+  am:
+    ntp:
+      servers:
+        - 0.us.pool.ntp.org
+        - 1.us.pool.ntp.org
+    tacacs:
+      servers:
+        - 198.51.100.10
+        
+interface_vlans:
+  - id: 10
+    description: Users
+    ip_address: null
+
+  - id: 20
+    description: Servers
+    ip_address: null
+
+  - id: 30
+    description: Management
+    ip_address: null
