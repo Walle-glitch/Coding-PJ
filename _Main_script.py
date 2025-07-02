@@ -17,6 +17,7 @@ def merge_configs(global_config, device_config, user_input):
     merged.update(device_config)
     merged.update(user_input)
 
+    # Region overrides
     region = merged.get("region", "").lower()
     region_overrides = global_config.get("regions", {}).get(region, {})
     for key, value in region_overrides.items():
@@ -40,6 +41,14 @@ def write_output(config, output_dir="output_configs"):
         print(f"✅ Configuration saved to {filepath}")
 
 
+def validate_ip(ip_str):
+    try:
+        ipaddress.ip_address(ip_str)
+        return True
+    except ValueError:
+        return False
+
+
 if __name__ == "__main__":
     # === Paths ===
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -58,21 +67,12 @@ if __name__ == "__main__":
     hostname = input("Hostname: ").strip()
     region = input("Region (EU, AP, AM): ").strip().lower()
     loopback_ip = input("Loopback IP: ").strip()
-    tacacs_pw = input("TACACS Password: ").strip()
     snmp_location = input("SNMP Location: ").strip()
+    tacacs_pw = input("TACACS Password: ").strip()
+    enable_pw = input("Enable Password: ").strip()
+    user_pw = input("User Password: ").strip()
 
-    vlans = []
-    try:
-        vlan_count = int(input("How many VLANs? "))
-        for i in range(vlan_count):
-            vid = input(f"  VLAN ID {i+1}: ").strip()
-            vname = input(f"  VLAN Name {i+1}: ").strip()
-            vip = input(f"  VLAN IP (optional): ").strip()
-            vlans.append({"id": vid, "name": vname, "ip_address": vip})
-    except ValueError:
-        print("❌ Invalid number of VLANs.")
-        exit(1)
-
+    # === User Data Injection ===
     user_input = {
         "hostname": hostname,
         "region": region,
@@ -81,14 +81,20 @@ if __name__ == "__main__":
             "ip_address": loopback_ip,
             "subnet_mask": "255.255.255.255"
         },
-        "vlans": vlans,
         "snmp": {
+            "encryption": "sha",
+            "key": "your_snmp_key",
+            "privacy": "aes",
+            "privacy_key": "your_snmp_privacy_key",
             "location": snmp_location
         },
         "tacacs": {
             "key": tacacs_pw
-        }
+        },
+        "enable_password": enable_pw,
+        "user_password": user_pw
     }
 
+    # === Merge + Output ===
     full_config = merge_configs(global_config, device_config, user_input)
     write_output(full_config)

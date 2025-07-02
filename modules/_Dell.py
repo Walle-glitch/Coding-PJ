@@ -11,6 +11,15 @@ def generate_config(config: dict) -> str:
             lines.append(f" name {vlan['name']}")
         lines.append("!")
 
+    # VLAN Interface configuration (from global interface_vlans)
+    for svi in config.get("interface_vlans", []):
+        lines.append(f"interface vlan {svi['id']}")
+        if svi.get("description"):
+            lines.append(f" description {svi['description']}")
+        if svi.get("ip_address") and svi["ip_address"].lower() != "null":
+            lines.append(f" ip address {svi['ip_address']} 255.255.255.0")
+        lines.append("!")
+
     # Interface configuration
     for iface in config.get("interfaces", []):
         names = iface["name"] if isinstance(iface["name"], list) else [iface["name"]]

@@ -1,46 +1,30 @@
 acl:
-  - name: BLOCK_WEBSITES
+  - name: Management_access
     rules:
-      - action: deny
-        dst: 192.0.2.1
-        port: 80
-        protocol: tcp
       - action: permit
-        dst: any
         protocol: ip
-
-dns:
-  domain_name: example.local
-  servers:
-    - 8.8.8.8
-    - 8.8.4.4
+        dst: 192.0.2.10
+      - action: permit
+        protocol: ip
+        dst: 192.0.2.11
+      - action: deny
+        protocol: ip
+        dst: any
 
 logging:
   hosts:
-    - 192.0.2.100
+    - "fill in with your syslog server IP"
   level: informational
-
-ntp:
-  servers:
-    - 0.pool.ntp.org
-    - 1.pool.ntp.org
 
 ospf:
   process_id: 1
   networks:
-    - 192.168.10.0 0.0.0.255 area 0
-
-ssh:
-  username: admin
+    - "fill in with your network IP area 1"
 
 stp:
   enabled: true
-  priority: 4096
-
-snmp:
-  community: public
-  contact: admin@example.com
-  location: DC1
+  core_priority: 4096
+  bridge_priority: 32768
 
 regions:
   eu:
@@ -51,6 +35,11 @@ regions:
     tacacs:
       servers:
         - 192.0.2.200
+    dns:
+      domain_name: eu.corp.com
+      servers:
+        - 8.8.8.8
+        - 8.8.4.4
   ap:
     ntp:
       servers:
@@ -59,6 +48,11 @@ regions:
     tacacs:
       servers:
         - 203.0.113.10
+    dns:
+      domain_name: ap.corp.com
+      servers:
+        - 1.1.1.1
+        - 1.0.0.1
   am:
     ntp:
       servers:
@@ -67,16 +61,33 @@ regions:
     tacacs:
       servers:
         - 198.51.100.10
-        
+    dns:
+      domain_name: am.corp.com
+      servers:
+        - 9.9.9.9
+        - 149.112.112.112
+
 interface_vlans:
   - id: 10
     description: Users
-    ip_address: null
+    ip_address: "fill in with your VLAN IP"
 
   - id: 20
     description: Servers
-    ip_address: null
+    ip_address: "fill in with your VLAN IP"
 
   - id: 30
     description: Management
-    ip_address: null
+    ip_address: "fill in with your VLAN IP"
+
+  - id: 40
+    description: VoIP
+    ip_address: "fill in with your VLAN IP"
+
+  - id: 50
+    description: Wireless
+    ip_address: "fill in with your VLAN IP"
+
+  - id: 60
+    description: Parking_Lot
+    ip_address: "fill in with your VLAN IP"
