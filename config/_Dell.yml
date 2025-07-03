@@ -6,74 +6,61 @@ supports_stp: true
 supports_loopback: true
 supports_enable_password: true
 
-
-# It should be iterated or something so that it can handle multiple interfaces with different names and different configurations.
-# below is an "typed" version of the interfaces section, and it should be used to generate the interfaces section in the config file.
-
 interfaces:
-  - name: Gi1/0/1 
+  - name: Gi1/0/1
     description: Access VLAN port
     mode: access
     vlan: 10
     no_shutdown: true
     spanningtree: portfast
-
   - name: Gi1/0/2
     description: Trunk to AP
     mode: trunk
     allowed_vlans: 10,20
     no_shutdown: true
     spanningtree: none
-
   - name: Gi1/0/3
     description: Access VLAN port
     mode: access
     vlan: 10
     no_shutdown: true
     spanningtree: portfast
-
   - name: Gi1/0/4
     description: Trunk to AP
     mode: trunk
     allowed_vlans: 10,20
     no_shutdown: true
     spanningtree: none
-
   - name: Gi1/0/5
     description: Access VLAN port
     mode: access
     vlan: 10
     no_shutdown: true
     spanningtree: portfast
-
   - name: Gi1/0/6
     description: Trunk to AP
     mode: trunk
     allowed_vlans: 10,20
     no_shutdown: true
     spanningtree: none
-
   - name: Gi1/0/7
     description: Access VLAN port
     mode: access
     vlan: 10
     no_shutdown: true
     spanningtree: portfast
-
   - name: Gi1/0/8
     description: Trunk to AP
     mode: trunk
     allowed_vlans: 10,20
     no_shutdown: true
     spanningtree: none
-
   - name: Gi1/0/9
     description: Uplink to Core
     mode: trunk
     allowed_vlans: 10,20,30
     no_shutdown: true
     spanningtree: none
-
   - name: Gi1/0/10
     description: Parking Lot
     mode: access
@@ -84,5 +71,31 @@ interfaces:
 loopbacks:
   - id: 0
     description: Loopback Interface
-    ip_address: null
+    ip_address: 10.0.0.1
+    subnet_mask: 255.255.255.255
 
+vlan_interfaces:
+  - id: 10
+    description: Users VLAN
+    ip_address: 10.x.x.x
+    subnet_mask: 255.255.255.0
+  - id: 20
+    description: Servers VLAN
+    ip_address: 10.x.x.x
+    subnet_mask: 255.255.255.0
+  - id: 30
+    description: Management VLAN
+    ip_address: 10.x.x.x
+    subnet_mask: 255.255.255.0
+  - id: 40
+    description: VoIP VLAN
+    ip_address: 10.x.x.x
+    subnet_mask: 255.255.255.0
+  - id: 50
+    description: Wireless VLAN
+    ip_address: 10.x.x.x
+    subnet_mask: 255.255.255.0
+  - id: 60
+    description: Parking Lot VLAN
+    ip_address: 10.x.x.x
+    subnet_mask: 255.255.255.0

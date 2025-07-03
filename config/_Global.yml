@@ -13,13 +13,13 @@ acl:
 
 logging:
   hosts:
-    - "fill in with your syslog server IP"
+    - "10.x.x.x"
   level: informational
 
 ospf:
   process_id: 1
   networks:
-    - "fill in with your network IP area 1"
+    - "10.x.x.x 0.0.0.255 area 0"
 
 stp:
   enabled: true
@@ -70,24 +70,25 @@ regions:
 interface_vlans:
   - id: 10
     description: Users
-    ip_address: "fill in with your VLAN IP"
-
+    ip_address: "10.x.x.x"
+    subnet_mask: "255.255.255.0"
   - id: 20
     description: Servers
-    ip_address: "fill in with your VLAN IP"
-
+    ip_address: "10.x.x.x"
+    subnet_mask: "255.255.255.0"
   - id: 30
     description: Management
-    ip_address: "fill in with your VLAN IP"
-
+    ip_address: "10.x.x.x"
+    subnet_mask: "255.255.255.0"
   - id: 40
     description: VoIP
-    ip_address: "fill in with your VLAN IP"
-
+    ip_address: "10.x.x.x"
+    subnet_mask: "255.255.255.0"
   - id: 50
     description: Wireless
-    ip_address: "fill in with your VLAN IP"
-
+    ip_address: "10.x.x.x"
+    subnet_mask: "255.255.255.0"
   - id: 60
     description: Parking_Lot
-    ip_address: "fill in with your VLAN IP"
+    ip_address: "10.x.x.x"
+    subnet_mask: "255.255.255.0"

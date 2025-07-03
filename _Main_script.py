@@ -1,9 +1,9 @@
 import yaml
 import os
 import ipaddress
-from modules._Dell import generate_config
+from jinja2 import Environment, FileSystemLoader
 
-
+# === Load YAML File ===
 def load_yaml(path):
     if not os.path.exists(path):
         print(f"❌ Missing configuration file: {path}")
@@ -11,13 +11,12 @@ def load_yaml(path):
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
-
+# === Merge Global + Vendor + User Input ===
 def merge_configs(global_config, device_config, user_input):
     merged = global_config.copy()
     merged.update(device_config)
     merged.update(user_input)
 
-    # Region overrides
     region = merged.get("region", "").lower()
     region_overrides = global_config.get("regions", {}).get(region, {})
     for key, value in region_overrides.items():
@@ -27,8 +26,14 @@ def merge_configs(global_config, device_config, user_input):
 
     return merged
 
+# === Render Jinja2 Template ===
+def render_config(template_name, config):
+    env = Environment(loader=FileSystemLoader("templates"))
+    template = env.get_template(template_name)
+    return template.render(**config)
 
-def write_output(config, output_dir="output_configs"):
+# === Save Output File ===
+def write_output(config, rendered_config, output_dir="output_configs"):
     os.makedirs(output_dir, exist_ok=True)
     filename = f"{config['hostname']}.config"
     filepath = os.path.join(output_dir, filename)
@@ -37,10 +42,10 @@ def write_output(config, output_dir="output_configs"):
         print(f"⚠️  File {filename} already exists. Not overwriting.")
     else:
         with open(filepath, "w", encoding="utf-8") as f:
-            f.write(generate_config(config))
+            f.write(rendered_config)
         print(f"✅ Configuration saved to {filepath}")
 
-
+# === Validate IP ===
 def validate_ip(ip_str):
     try:
         ipaddress.ip_address(ip_str)
@@ -48,44 +53,65 @@ def validate_ip(ip_str):
     except ValueError:
         return False
 
-
+# === Main Program ===
 if __name__ == "__main__":
-    # === Paths ===
     base_dir = os.path.dirname(os.path.abspath(__file__))
     config_dir = os.path.join(base_dir, "config")
     global_path = os.path.join(config_dir, "_Global.yml")
-    dell_path = os.path.join(config_dir, "_Dell.yml")
 
+    # === Load Global Config ===
     global_config = load_yaml(global_path)
     if not global_config:
         print("❌ Failed to load global config. Exiting.")
         exit(1)
 
-    device_config = load_yaml(dell_path)
-
     # === User Input ===
+    vendor = input("Vendor (Dell, FortiSwitch): ").strip().lower()
     hostname = input("Hostname: ").strip()
+    if not hostname:
+        print("❌ Hostname is required.")
+        exit(1)
+
     region = input("Region (EU, AP, AM): ").strip().lower()
     loopback_ip = input("Loopback IP: ").strip()
+    if not validate_ip(loopback_ip):
+        print("❌ Invalid Loopback IP address.")
+        exit(1)
+
     snmp_location = input("SNMP Location: ").strip()
+    snmp_key_aes = input("SNMP AES Key: ").strip()
+    snmp_key_sha = input("SNMP SHA Key: ").strip()
     tacacs_pw = input("TACACS Password: ").strip()
     enable_pw = input("Enable Password: ").strip()
     user_pw = input("User Password: ").strip()
 
-    # === User Data Injection ===
+    # === Load Vendor Config ===
+    vendor_file = f"_{vendor.capitalize()}.yml"
+    vendor_path = os.path.join(config_dir, vendor_file)
+
+    if not os.path.exists(vendor_path):
+        print(f"❌ Vendor config file not found: {vendor_path}")
+        exit(1)
+
+    vendor_config = load_yaml(vendor_path)
+
+    # === Build User Configuration Data ===
     user_input = {
         "hostname": hostname,
         "region": region,
-        "loopback": {
-            "name": "Loopback0",
-            "ip_address": loopback_ip,
-            "subnet_mask": "255.255.255.255"
-        },
+        "loopbacks": [
+            {
+                "id": 0,
+                "description": "Loopback Interface",
+                "ip_address": loopback_ip,
+                "subnet_mask": "255.255.255.255"
+            }
+        ],
         "snmp": {
             "encryption": "sha",
-            "key": "your_snmp_key",
+            "key": snmp_key_sha,
             "privacy": "aes",
-            "privacy_key": "your_snmp_privacy_key",
+            "privacy_key": snmp_key_aes,
             "location": snmp_location
         },
         "tacacs": {
@@ -95,6 +121,13 @@ if __name__ == "__main__":
         "user_password": user_pw
     }
 
-    # === Merge + Output ===
-    full_config = merge_configs(global_config, device_config, user_input)
-    write_output(full_config)
+    # === Merge All Configs ===
+    full_config = merge_configs(global_config, vendor_config, user_input)
+
+    # === Determine Template ===
+    template_style = vendor_config.get("template_style", vendor).lower()
+    template_file = f"{template_style}_config.j2"
+
+    # === Render & Save ===
+    rendered_config = render_config(template_file, full_config)
+    write_output(full_config, rendered_config)

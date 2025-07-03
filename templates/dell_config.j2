@@ -1,0 +1,113 @@
+hostname {{ hostname }}
+!
+
+{% if vlans %}
+{% for vlan in vlans %}
+vlan {{ vlan.id }}
+ name {{ vlan.name }}
+!
+{% endfor %}
+{% endif %}
+
+{% for iface in interfaces %}
+interface {{ iface.name }}
+ description {{ iface.description }}
+{% if iface.mode == "access" %}
+ switchport mode access
+ switchport access vlan {{ iface.vlan }}
+{% elif iface.mode == "trunk" %}
+ switchport mode trunk
+ switchport trunk allowed vlan {{ iface.allowed_vlans }}
+{% endif %}
+{% if iface.no_shutdown %}
+ no shutdown
+{% else %}
+ shutdown
+{% endif %}
+{% if iface.spanningtree == "portfast" %}
+ spanning-tree portfast
+{% elif iface.spanningtree == "none" %}
+ spanning-tree bpduguard disable
+{% endif %}
+!
+{% endfor %}
+
+{% for lo in loopbacks %}
+interface Loopback{{ lo.id }}
+ description {{ lo.description }}
+ ip address {{ lo.ip_address }} {{ lo.subnet_mask }}
+!
+{% endfor %}
+
+{% for vlan_if in vlan_interfaces %}
+interface vlan {{ vlan_if.id }}
+ description {{ vlan_if.description }}
+ ip address {{ vlan_if.ip_address }} {{ vlan_if.subnet_mask }}
+!
+{% endfor %}
+
+{% if snmp.location %}
+snmp-server location {{ snmp.location }}
+{% endif %}
+snmp-server contact NetworkOps
+snmp-server host 192.0.2.1 informs version 2c public
+snmp-server enable traps
+!
+
+{% if enable_password %}
+enable secret {{ enable_password }}
+!
+{% endif %}
+
+{% if user_password %}
+username admin secret {{ user_password }}
+!
+{% endif %}
+
+{% if ntp.servers %}
+{% for server in ntp.servers %}
+ntp server {{ server }}
+{% endfor %}
+!
+{% endif %}
+
+{% if logging.hosts %}
+{% for host in logging.hosts %}
+logging host {{ host }}
+{% endfor %}
+logging trap {{ logging.level }}
+!
+{% endif %}
+
+{% if tacacs.servers %}
+{% for server in tacacs.servers %}
+tacacs-server host {{ server }}
+{% endfor %}
+tacacs-server key {{ tacacs.key }}
+!
+{% endif %}
+
+{% if ospf %}
+router ospf {{ ospf.process_id }}
+{% for net in ospf.networks %}
+ network {{ net }}
+{% endfor %}
+!
+{% endif %}
+
+{% if stp.enabled %}
+spanning-tree mode rapid-pvst
+spanning-tree priority {{ stp.core_priority }}
+spanning-tree vlan 1-4094 priority {{ stp.bridge_priority }}
+!
+{% endif %}
+
+{% if acl %}
+{% for acl_entry in acl %}
+ip access-list extended {{ acl_entry.name }}
+{% for rule in acl_entry.rules %}
+ {{ rule.action }} ip any {{ rule.dst }}
+{% endfor %}
+!
+{% endfor %}
+{% endif %}
