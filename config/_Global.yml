@@ -1,3 +1,70 @@
+vendor:
+  - Cisco
+  - Juniper
+  - Arista
+  - HP
+  - Extreme
+  - Huawei
+  - Brocade
+  - Netgear
+  - MikroTik
+  - TP-Link
+  - Zyxel
+  - Allied Telesis
+  - Avaya
+  - Alcatel-Lucent
+  - D-Link
+  - Linksys
+  - Ubiquiti
+  - Edgecore
+  - Mellanox
+  - Ruckus
+  - Cisco Meraki
+  - Fortinet
+  - Palo Alto Networks
+  - HPE Aruba
+  - Dell EMC Networking
+
+template_style:
+  - access_switch
+  - core_switch
+  - distribution_switch
+  - router
+  - firewall
+  - wireless_controller
+
+interface_prefix:
+  - TenGigabitEthernet
+  - GigabitEthernet
+  - port-channel
+  - Ethernet
+  - FastEthernet
+  - TenGigE
+  - GigE
+  - Te
+  - Gi
+  - Fa
+  - Po
+  - port
+  - xe-
+
+supports_vlan_interface: true
+supports_loopback: false
+supports_enable_password: true
+supports_SNMP: true
+supports_AAA: true
+supports_ssh: true
+supports_https: true
+supports_telnet: false
+supports_ospf: false
+supports_tacacs: true
+supports_radius: false
+supports_acl: true
+supports_logging: true
+supports_ntp: true
+supports_dhcp: false
+supports_bgp: true
+
 acl:
   - name: Management_access
     rules:
@@ -21,10 +88,55 @@ ospf:
   networks:
     - "10.x.x.x 0.0.0.255 area 0"
 
-stp:
-  enabled: true
-  core_priority: 4096
-  bridge_priority: 32768
+bgp:
+  asn: 65001
+  router_id: 10.0.0.1
+  networks:
+    - "10.1.0.0 mask 255.255.0.0"
+    - "10.2.0.0 mask 255.255.0.0"
+  neighbors:
+    - ip: 192.0.2.1
+      remote_as: 65002
+      description: Connection to ISP1
+      update_source: Loopback0
+      next_hop_self: true
+      soft_reconfig: true
+      route_map_in: RM-IN
+      route_map_out: RM-OUT
+    - ip: 192.0.2.2
+      remote_as: 65003
+      description: Connection to ISP2
+      update_source: Loopback0
+      next_hop_self: true
+      soft_reconfig: false
+  prefix_lists:
+    - name: PL-IN
+      description: Permit internal prefixes
+      rules:
+        - action: permit
+          prefix: 10.0.0.0/8
+        - action: deny
+          prefix: 0.0.0.0/0
+    - name: PL-OUT
+      description: Only advertise specific ranges
+      rules:
+        - action: permit
+          prefix: 10.1.0.0/16
+  route_maps:
+    - name: RM-IN
+      description: Apply inbound filters
+      entries:
+        - sequence: 10
+          action: permit
+          match: prefix-list PL-IN
+        - sequence: 20
+          action: deny
+    - name: RM-OUT
+      description: Apply outbound filters
+      entries:
+        - sequence: 10
+          action: permit
+          match: prefix-list PL-OUT
 
 regions:
   eu:
@@ -66,29 +178,3 @@ regions:
       servers:
         - 9.9.9.9
         - 149.112.112.112
-
-interface_vlans:
-  - id: 10
-    description: Users
-    ip_address: "10.x.x.x"
-    subnet_mask: "255.255.255.0"
-  - id: 20
-    description: Servers
-    ip_address: "10.x.x.x"
-    subnet_mask: "255.255.255.0"
-  - id: 30
-    description: Management
-    ip_address: "10.x.x.x"
-    subnet_mask: "255.255.255.0"
-  - id: 40
-    description: VoIP
-    ip_address: "10.x.x.x"
-    subnet_mask: "255.255.255.0"
-  - id: 50
-    description: Wireless
-    ip_address: "10.x.x.x"
-    subnet_mask: "255.255.255.0"
-  - id: 60
-    description: Parking_Lot
-    ip_address: "10.x.x.x"
-    subnet_mask: "255.255.255.0"

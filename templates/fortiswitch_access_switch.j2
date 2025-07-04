@@ -1,0 +1,102 @@
+{# fortiswitch_access_switch.j2 - FortiSwitch Access Switch Configuration #}
+
+config system global
+    set hostname {{ hostname }}
+end
+
+{% if enable_password %}
+config system admin
+    edit "admin"
+        set password {{ enable_password }}
+    next
+end
+{% endif %}
+
+{% if snmp.location %}
+config system snmp sysinfo
+    set location "{{ snmp.location }}"
+end
+{% endif %}
+
+{% if snmp %}
+config system snmp community
+    edit 1
+        set name "public"
+        set status enable
+        set query-v1-status enable
+        set query-v2c-status enable
+        set events cpu-high mem-low log-full intf-ip ip-conf-chg ent-conf-chg fm-conf-chg ha-switch
+    next
+end
+{% endif %}
+
+{% if stp.enabled %}
+config switch stp-settings
+    set status enable
+    set bridge-priority {{ stp.bridge_priority | default(32768) }}
+end
+{% endif %}
+
+{# === INTERFACES === #}
+{% for iface in interfaces %}
+config switch interface
+    edit "{{ iface.name }}"
+        set description "{{ iface.description }}"
+        set mode {{ iface.mode }}
+        {% if iface.mode == "access" %}
+        set vlan {{ iface.vlan }}
+        {% elif iface.mode == "trunk" %}
+        set allowed-vlans "{{ iface.allowed_vlans }}"
+        {% endif %}
+        {% if iface.spanningtree == "portfast" %}
+        set stp enable
+        {% elif iface.spanningtree == "none" %}
+        set stp disable
+        {% endif %}
+        {% if iface.no_shutdown %}unset shutdown{% else %}set shutdown{% endif %}
+    next
+end
+{% endfor %}
+
+{# === VLAN INTERFACES === #}
+{% for vlan_if in vlan_interfaces %}
+config system interface
+    edit "vlan{{ vlan_if.id }}"
+        set vdom "root"
+        set ip {{ vlan_if.ip_address }} {{ vlan_if.subnet_mask }}
+        set allowaccess ping
+        set vlanid {{ vlan_if.id }}
+        set interface "internal"
+    next
+end
+{% endfor %}
+
+{# === TACACS === #}
+{% if tacacs and tacacs.servers and tacacs.key %}
+config system tacacs+
+    edit 1
+        set server {{ tacacs.servers[0] }}
+        set key "{{ tacacs.key }}"
+    next
+end
+{% endif %}
+
+{# === NTP === #}
+{% if ntp.servers %}
+config system ntp
+    set type custom
+    {% for server in ntp.servers %}
+    set server{{ loop.index }} "{{ server }}"
+    {% endfor %}
+end
+{% endif %}
+
+{# === SYSLOG === #}
+{% if logging.hosts %}
+config log syslogd setting
+    set status enable
+    {% for host in logging.hosts %}
+    set server{{ loop.index }} "{{ host }}"
+    {% endfor %}
+end
+{% endif %}

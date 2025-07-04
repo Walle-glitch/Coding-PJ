@@ -1,72 +1,60 @@
-vendor: Dell
-template_style: OS6
-interface_prefix: TenGigabitEthernet or GigabitEthernet
+vendor: Cisco, Juniper, Arista, Fortinet, Dell EMC Networking
+template_style: Core_switch
+interface_prefix: TenGigabitEthernet, GigabitEthernet, port-channel, Ethernet, FastEthernet, TenGigabitEthernet,
+  GigabitEthernet, TenGigE, GigE, Te, Gi, Fa, Po, port, xe-
 supports_vlan_interface: true
-supports_stp: true
 supports_loopback: true
 supports_enable_password: true
+supports_SNMP: true
+supports_AAA: true
+supports_ssh: true
+supports_https: true
+supports_telnet: false
+supports_ospf: true
+supports_tacacs: true
+supports_radius: false
+supports_acl: true
+supports_logging: true
+supports_ntp: true
+supports_dhcp: false
+supports_bgp: true
+
+stp:
+  enabled: true
+  core_priority: 4096
 
 interfaces:
-  - name: Gi1/0/1
+  - name: Access_VLAN_Port
     description: Access VLAN port
     mode: access
     vlan: 10
     no_shutdown: true
     spanningtree: portfast
-  - name: Gi1/0/2
+    EEE: False
+
+  - name: Trunk_to_AP
     description: Trunk to AP
     mode: trunk
     allowed_vlans: 10,20
     no_shutdown: true
-    spanningtree: none
-  - name: Gi1/0/3
-    description: Access VLAN port
-    mode: access
-    vlan: 10
-    no_shutdown: true
-    spanningtree: portfast
-  - name: Gi1/0/4
-    description: Trunk to AP
-    mode: trunk
-    allowed_vlans: 10,20
-    no_shutdown: true
-    spanningtree: none
-  - name: Gi1/0/5
-    description: Access VLAN port
-    mode: access
-    vlan: 10
-    no_shutdown: true
-    spanningtree: portfast
-  - name: Gi1/0/6
-    description: Trunk to AP
-    mode: trunk
-    allowed_vlans: 10,20
-    no_shutdown: true
-    spanningtree: none
-  - name: Gi1/0/7
-    description: Access VLAN port
-    mode: access
-    vlan: 10
-    no_shutdown: true
-    spanningtree: portfast
-  - name: Gi1/0/8
-    description: Trunk to AP
-    mode: trunk
-    allowed_vlans: 10,20
-    no_shutdown: true
-    spanningtree: none
-  - name: Gi1/0/9
+    spanningtree: true
+    EEE: False
+
+  - name: Uplink_to_Core
     description: Uplink to Core
     mode: trunk
     allowed_vlans: 10,20,30
     no_shutdown: true
     spanningtree: none
-  - name: Gi1/0/10
+    EEE: False
+
+  - name: Parking_Lot
     description: Parking Lot
     mode: access
     vlan: 999
     no_shutdown: false
     spanningtree: none
+    EEE: False
 
 loopbacks:
   - id: 0

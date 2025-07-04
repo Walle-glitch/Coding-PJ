@@ -1,0 +1,102 @@
+{# Jinja2 Template: access_switch_config.j2 #}
+
+! Hostname
+hostname {{ hostname }}
+
+{% if enable_password %}
+enable secret {{ enable_password }}
+{% endif %}
+
+{% if snmp %}
+snmp-server location {{ snmp.location }}
+snmp-server community public RO
+{% if snmp.contact %}snmp-server contact {{ snmp.contact }}{% endif %}
+{% endif %}
+
+{% if supports_AAA %}
+aaa new-model
+{% endif %}
+
+{% if acl %}
+{% for acl_entry in acl %}
+ip access-list extended {{ acl_entry.name }}
+{% for rule in acl_entry.rules %}
+ {{ rule.action }} {{ rule.protocol }} any {{ rule.dst }}
+{% endfor %}
+exit
+{% endfor %}
+{% endif %}
+
+{% if stp.enabled %}
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+spanning-tree vlan 1-4094 priority {{ stp.bridge_priority or stp.core_priority }}
+{% endif %}
+
+{% for intf in interfaces %}
+interface {{ intf.name }}
+ description {{ intf.description }}
+ switchport mode {{ intf.mode }}
+{% if intf.mode == "access" %}
+ switchport access vlan {{ intf.vlan }}
+{% elif intf.mode == "trunk" %}
+ switchport trunk allowed vlan {{ intf.allowed_vlans }}
+{% endif %}
+{% if intf.spanningtree == "portfast" %}
+ spanning-tree portfast
+{% elif intf.spanningtree == "none" %}
+ spanning-tree bpduguard disable
+{% elif intf.spanningtree %}
+ spanning-tree {{ intf.spanningtree }}
+{% endif %}
+{% if intf.no_shutdown %}
+ no shutdown
+{% else %}
+ shutdown
+{% endif %}
+exit
+
+{% endfor %}
+
+{% if vlan_interfaces %}
+{% for svi in vlan_interfaces %}
+interface vlan {{ svi.id }}
+ description {{ svi.name or svi.description }}
+{% if svi.ip_address %} ip address {{ svi.ip_address }} {{ svi.subnet_mask }}
+{% endif %} no shutdown
+exit
+
+{% endfor %}
+{% endif %}
+
+{% if loopbacks and supports_loopback %}
+{% for lb in loopbacks %}
+interface Loopback{{ lb.id }}
+ description {{ lb.description }}
+ ip address {{ lb.ip_address }} {{ lb.subnet_mask }}
+exit
+
+{% endfor %}
+{% endif %}
+
+{% if logging %}
+{% for host in logging.hosts %}logging host {{ host }}
+{% endfor %}logging trap {{ logging.level }}
+{% endif %}
+
+{% if ntp and ntp.servers %}
+{% for server in ntp.servers %}ntp server {{ server }}
+{% endfor %}
+{% endif %}
+
+{% if tacacs and tacacs.key %}
+{% for server in tacacs.servers or [] %}tacacs-server host {{ server }} key {{ tacacs.key }}
+{% endfor %}
+{% endif %}
+
+{% if dns and dns.servers %}
+ip domain-name {{ dns.domain_name }}
+{% for dns_server in dns.servers %}
+ip name-server {{ dns_server }}
+{% endfor %}
+{% endif %}

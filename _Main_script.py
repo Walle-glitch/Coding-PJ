@@ -11,7 +11,7 @@ def load_yaml(path):
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
-# === Merge Global + Vendor + User Input ===
+# === Merge Global + Device Type + User Input ===
 def merge_configs(global_config, device_config, user_input):
     merged = global_config.copy()
     merged.update(device_config)
@@ -66,17 +66,28 @@ if __name__ == "__main__":
         exit(1)
 
     # === User Input ===
-    vendor = input("Vendor (Dell, FortiSwitch): ").strip().lower()
+    vendor = input("Vendor (Cisco, FortiSwitch, Dell, etc.): ").strip().lower()
+    device_type = input("Device Type (access_switch, core_switch, router, firewall): ").strip().lower()
     hostname = input("Hostname: ").strip()
     if not hostname:
         print("❌ Hostname is required.")
         exit(1)
 
     region = input("Region (EU, AP, AM): ").strip().lower()
-    loopback_ip = input("Loopback IP: ").strip()
-    if not validate_ip(loopback_ip):
-        print("❌ Invalid Loopback IP address.")
-        exit(1)
+
+    loopbacks = []
+    if global_config.get("supports_loopback", False) or device_type == "core_switch":
+        loopback_ip = input("Loopback IP (or press Enter to skip): ").strip()
+        if loopback_ip:
+            if not validate_ip(loopback_ip):
+                print("❌ Invalid Loopback IP address.")
+                exit(1)
+            loopbacks.append({
+                "id": 0,
+                "description": "Loopback Interface",
+                "ip_address": loopback_ip,
+                "subnet_mask": "255.255.255.255"
+            })
 
     snmp_location = input("SNMP Location: ").strip()
     snmp_key_aes = input("SNMP AES Key: ").strip()
@@ -85,28 +96,19 @@ if __name__ == "__main__":
     enable_pw = input("Enable Password: ").strip()
     user_pw = input("User Password: ").strip()
 
-    # === Load Vendor Config ===
-    vendor_file = f"_{vendor.capitalize()}.yml"
-    vendor_path = os.path.join(config_dir, vendor_file)
-
-    if not os.path.exists(vendor_path):
-        print(f"❌ Vendor config file not found: {vendor_path}")
+    # === Load Device Type Config ===
+    device_file = f"{device_type}.yml"
+    device_path = os.path.join(config_dir, device_file)
+    if not os.path.exists(device_path):
+        print(f"❌ Device type config file not found: {device_path}")
         exit(1)
-
-    vendor_config = load_yaml(vendor_path)
+    device_config = load_yaml(device_path)
 
     # === Build User Configuration Data ===
     user_input = {
         "hostname": hostname,
         "region": region,
-        "loopbacks": [
-            {
-                "id": 0,
-                "description": "Loopback Interface",
-                "ip_address": loopback_ip,
-                "subnet_mask": "255.255.255.255"
-            }
-        ],
+        "loopbacks": loopbacks,
         "snmp": {
             "encryption": "sha",
             "key": snmp_key_sha,
@@ -115,19 +117,23 @@ if __name__ == "__main__":
             "location": snmp_location
         },
         "tacacs": {
-            "key": tacacs_pw
+            "key": tacacs_pw,
+            "servers": global_config.get("regions", {}).get(region, {}).get("tacacs", {}).get("servers", [])
         },
         "enable_password": enable_pw,
         "user_password": user_pw
     }
 
     # === Merge All Configs ===
-    full_config = merge_configs(global_config, vendor_config, user_input)
+    full_config = merge_configs(global_config, device_config, user_input)
 
-    # === Determine Template ===
-    template_style = vendor_config.get("template_style", vendor).lower()
-    template_file = f"{template_style}_config.j2"
+    # === Determine Template File ===
+    template_file = f"{vendor}_{device_type}.j2"
+    template_path = os.path.join(base_dir, "templates", template_file)
+    if not os.path.exists(template_path):
+        print(f"❌ Template not found: {template_file}")
+        exit(1)
 
-    # === Render & Save ===
+    # === Render and Save ===
     rendered_config = render_config(template_file, full_config)
     write_output(full_config, rendered_config)
