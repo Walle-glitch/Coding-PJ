@@ -1,73 +1,84 @@
-vendor: Cisco, Juniper, Arista, Fortinet, Dell EMC Networking
-template_style: access_switch
-interface_prefix: TenGigabitEthernet, GigabitEthernet, port-channel, Ethernet, FastEthernet, TenGigabitEthernet,
-  GigabitEthernet, TenGigE, GigE, Te, Gi, Fa, Po, port, xe-
-supports_vlan_interface: true
-supports_loopback: false
-supports_enable_password: true
-supports_SNMP: true
-supports_AAA: true
-supports_ssh: true
-supports_https: true
-supports_telnet: false
-supports_ospf: false
-supports_tacacs: true
-supports_radius: false
-supports_acl: true
-supports_logging: true
-supports_ntp: true
-supports_dhcp: false
-supports_bgp: false
+# ===================================================================
+# Golden Template för Access Switch
+#
+# Denna fil definierar exakt hur en standard access-switch ska se ut,
+# inklusive alla VLANs, interface, och standardinställningar.
+# ===================================================================
 
+# --- Standardinställningar för Spanning Tree ---
 stp:
   enabled: true
   bridge_priority: 32768
 
+# --- Standardkapabiliteter ---
+supports_loopback: false
+
+# --- Standard-DNS och Logging (kan överlagras) ---
+dns:
+  servers:
+    - "x.x.x.x"  # Ange DNS-server IP-adresser här
+    - "x.x.x.x"
+logging:
+  hosts:
+    - "10.x.x.x"  # Ange loggserver IP-adress här
+  level: informational
+# --- Standard-Tidssynkronisering ---
+
+# --- Standard-SNMP (nycklar måste anges i input-filen) ---
+snmp:
+  location: "Default Location"
+  contact: "noc@min-doman.local"
+
+# --- Standard-VLANs ---
+vlans:
+  - id: 10
+    name: Users
+  - id: 20
+    name: Servers
+  - id: 30
+    name: Management
+  - id: 50
+    name: Wireless
+  - id: 999
+    name: Parking-Lot
+
+# --- Standard Interface-konfiguration ---
 interfaces:
-  - name: Access_VLAN_Port
-    description: Access VLAN port
+  - name: "TenGigabitEthernet 1/0/1"
+    description: "Access Port - Users VLAN"
     mode: access
     vlan: 10
     no_shutdown: true
-    spanningtree: portfast
-    EEE: False
-
-  - name: Trunk_to_AP
-    description: Trunk to AP
+    spanningtree: "portfast"
+  - name: "TenGigabitEthernet 1/0/2"
+    description: "Trunk to Wireless AP"
     mode: trunk
-    allowed_vlans: 10,20
+    allowed_vlans: "10,50"
     no_shutdown: true
-    spanningtree: true
-    EEE: False
-
-  - name: Uplink_to_Core
-    description: Uplink to Core
+    spanningtree: "bpduguard_enable"
+  - name: "TenGigabitEthernet 1/0/48"
+    description: "Uplink to Core"
     mode: trunk
-    allowed_vlans: 10,20,30
+    allowed_vlans: "10,20,30,50"
     no_shutdown: true
-    spanningtree: none
-    EEE: False
-
-  - name: Parking_Lot
-    description: Parking Lot
+    spanningtree: "none"
+  - POE: true
+    name: "TenGigabitEthernet 1/0/3"
+    description: "Access Port - Users VLAN"
+    mode: access
+    vlan: 10
+    no_shutdown: true
+    spanningtree: "portfast"
+  - name: "TenGigabitEthernet 1/0/24"
+    description: "Parking Lot"
     mode: access
     vlan: 999
     no_shutdown: false
-    spanningtree: none
-    EEE: False
+    spanningtree: "portfast"
 
+# --- Standard SVI (Management Interface) ---
 vlan_interfaces:
-  - id: 10
-    name: Users VLAN
-  - id: 20
-    name: Servers VLAN
   - id: 30
-    name: Management VLAN
-    ip_address: 10.0.0.1
-    subnet_mask: 255.255.255.255
-  - id: 40
-    name: VoIP VLAN
-  - id: 50
-    name: Wireless VLAN
-  - id: 60
-    name: Parking Lot VLAN
+    name: "Management Interface"
+    ip_address: "10.x.x.x" # Notera: Denna IP kommer vara samma för alla!
+    subnet_mask: "255.255.255.0"

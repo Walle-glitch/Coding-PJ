@@ -1,143 +1,109 @@
-vendor:
-  - Cisco
-  - Juniper
-  - Arista
-  - HP
-  - Extreme
-  - Huawei
-  - Brocade
-  - Netgear
-  - MikroTik
-  - TP-Link
-  - Zyxel
-  - Allied Telesis
-  - Avaya
-  - Alcatel-Lucent
-  - D-Link
-  - Linksys
-  - Ubiquiti
-  - Edgecore
-  - Mellanox
-  - Ruckus
-  - Cisco Meraki
-  - Fortinet
-  - Palo Alto Networks
-  - HPE Aruba
-  - Dell EMC Networking
+# ===================================================================
+# Global Configuration File v2
+#
+# This file defines the foundational settings, defaults, and
+# region-specific overrides for the entire network automation system.
+# ===================================================================
 
-template_style:
-  - access_switch
-  - core_switch
-  - distribution_switch
-  - router
-  - firewall
-  - wireless_controller
+# --- Data for Validation and Interactive Prompts ---
+validation_data:
+  vendors:
+    - Cisco
+    - dell
+    - Juniper
+    - Arista
+    - Fortinet
+    - HPE Aruba
+    - Ubiquiti
+  template_styles:
+    - access_switch
+    - core_switch
+    - distribution_switch
+    - router
+    - firewall
 
-interface_prefix:
-  - TenGigabitEthernet
-  - GigabitEthernet
-  - port-channel
-  - Ethernet
-  - FastEthernet
-  - TenGigE
-  - GigE
-  - Te
-  - Gi
-  - Fa
-  - Po
-  - port
-  - xe-
+# --- Default Device Capabilities ---
+# These flags determine which configuration blocks are rendered.
+# They can be overridden in device-specific YAML files.
+default_capabilities:
+  supports_vlan_interface: true
+  supports_loopback: false
+  supports_enable_password: true
+  supports_SNMP: true
+  supports_AAA: true
+  supports_ssh: true
+  supports_https: true
+  supports_telnet: false
+  supports_ospf: false
+  supports_tacacs: true
+  supports_radius: false
+  supports_acl: true
+  supports_logging: true
+  supports_ntp: true
+  supports_dhcp: false
+  supports_bgp: true
 
-supports_vlan_interface: true
-supports_loopback: false
-supports_enable_password: true
-supports_SNMP: true
-supports_AAA: true
-supports_ssh: true
-supports_https: true
-supports_telnet: false
-supports_ospf: false
-supports_tacacs: true
-supports_radius: false
-supports_acl: true
-supports_logging: true
-supports_ntp: true
-supports_dhcp: false
-supports_bgp: true
+# --- Global Best Practice Settings ---
+base_commands:
+  - "service password-encryption"
+  - "no ip http server"
+  - "no ip http secure-server"
+  - "ip ssh version 2"
 
-acl:
-  - name: Management_access
-    rules:
-      - action: permit
-        protocol: ip
-        dst: 192.0.2.10
-      - action: permit
-        protocol: ip
-        dst: 192.0.2.11
-      - action: deny
-        protocol: ip
-        dst: any
+banner_text: |
+  *****************************************************************
+  * This system is for authorized use only.                       *
+  * All activities on this system are logged and monitored.       *
+  * Disconnect immediately if you are not an authorized user.     *
+  * Hostname: [HOSTNAME]                                          *
+  *****************************************************************
 
-logging:
-  hosts:
-    - "10.x.x.x"
-  level: informational
+fallback_user:
+  username: "localadmin"
+  privilege: 15
+  # Password for this user should be set via environment variable
+  # or prompted for interactively by the Python script.
 
-ospf:
-  process_id: 1
-  networks:
-    - "10.x.x.x 0.0.0.255 area 0"
+# --- Default Configurations for Advanced Features ---
+# These serve as a base that can be merged with device-specific settings.
+default_configs:
+  logging:
+    hosts:
+      - "10.0.0.10" # Default syslog server
+    level: informational
 
-bgp:
-  asn: 65001
-  router_id: 10.0.0.1
-  networks:
-    - "10.1.0.0 mask 255.255.0.0"
-    - "10.2.0.0 mask 255.255.0.0"
-  neighbors:
-    - ip: 192.0.2.1
-      remote_as: 65002
-      description: Connection to ISP1
-      update_source: Loopback0
-      next_hop_self: true
-      soft_reconfig: true
-      route_map_in: RM-IN
-      route_map_out: RM-OUT
-    - ip: 192.0.2.2
-      remote_as: 65003
-      description: Connection to ISP2
-      update_source: Loopback0
-      next_hop_self: true
-      soft_reconfig: false
-  prefix_lists:
-    - name: PL-IN
-      description: Permit internal prefixes
+  acl:
+    - name: Management_access
       rules:
         - action: permit
-          prefix: 10.0.0.0/8
+          protocol: ip
+          dst: 192.0.2.10
+        - action: permit
+          protocol: ip
+          dst: 192.0.2.11
         - action: deny
-          prefix: 0.0.0.0/0
-    - name: PL-OUT
-      description: Only advertise specific ranges
-      rules:
-        - action: permit
-          prefix: 10.1.0.0/16
-  route_maps:
-    - name: RM-IN
-      description: Apply inbound filters
-      entries:
-        - sequence: 10
-          action: permit
-          match: prefix-list PL-IN
-        - sequence: 20
-          action: deny
-    - name: RM-OUT
-      description: Apply outbound filters
-      entries:
-        - sequence: 10
-          action: permit
-          match: prefix-list PL-OUT
+          protocol: ip
+          dst: any
 
+  bgp:
+    asn: 65001
+    router_id: 10.0.0.1
+    networks:
+      - "10.1.0.0 mask 255.255.0.0"
+      - "10.2.0.0 mask 255.255.0.0"
+    neighbors:
+      - ip: 192.0.2.1
+        remote_as: 65002
+        description: Connection to ISP1
+        update_source: Loopback0
+        next_hop_self: true
+        soft_reconfig: true
+        route_map_in: RM-IN
+        route_map_out: RM-OUT
+
+# --- Region-Specific Overrides ---
+# These settings will be applied based on the 'region' key in
+# the device-specific YAML file.
 regions:
   eu:
     ntp:

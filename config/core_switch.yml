@@ -1,4 +1,4 @@
-vendor: Cisco, Juniper, Arista, Fortinet, Dell EMC Networking
+vendor: Cisco, Juniper, Arista, Fortinet, Dell
 template_style: Core_switch
 interface_prefix: TenGigabitEthernet, GigabitEthernet, port-channel, Ethernet, FastEthernet, TenGigabitEthernet,
   GigabitEthernet, TenGigE, GigE, Te, Gi, Fa, Po, port, xe-

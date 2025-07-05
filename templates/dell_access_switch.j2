@@ -1,102 +1,216 @@
-{# Jinja2 Template: access_switch_config.j2 #}
-
-! Hostname
+{#
+  Jinja2 Template for Dell OS9/OS10 Access Switch
+  Version: 5.0
+  Focus: Simplified and robust interface configuration
+#}
+!
+! Applying Global Best Practices & Base Commands
+! ==============================================
+{% if base_commands %}
+{% for cmd in base_commands %}
+{{ cmd }}
+{% endfor %}
+{% endif %}
+!
+! Base System Configuration
+! ==========================
 hostname {{ hostname }}
-
-{% if enable_password %}
-enable secret {{ enable_password }}
-{% endif %}
-
-{% if snmp %}
-snmp-server location {{ snmp.location }}
-snmp-server community public RO
-{% if snmp.contact %}snmp-server contact {{ snmp.contact }}{% endif %}
-{% endif %}
-
-{% if supports_AAA %}
-aaa new-model
-{% endif %}
-
-{% if acl %}
-{% for acl_entry in acl %}
-ip access-list extended {{ acl_entry.name }}
-{% for rule in acl_entry.rules %}
- {{ rule.action }} {{ rule.protocol }} any {{ rule.dst }}
-{% endfor %}
-exit
-{% endfor %}
-{% endif %}
-
-{% if stp.enabled %}
-spanning-tree mode rapid-pvst
-spanning-tree extend system-id
-spanning-tree vlan 1-4094 priority {{ stp.bridge_priority or stp.core_priority }}
-{% endif %}
-
-{% for intf in interfaces %}
-interface {{ intf.name }}
- description {{ intf.description }}
- switchport mode {{ intf.mode }}
-{% if intf.mode == "access" %}
- switchport access vlan {{ intf.vlan }}
-{% elif intf.mode == "trunk" %}
- switchport trunk allowed vlan {{ intf.allowed_vlans }}
-{% endif %}
-{% if intf.spanningtree == "portfast" %}
- spanning-tree portfast
-{% elif intf.spanningtree == "none" %}
- spanning-tree bpduguard disable
-{% elif intf.spanningtree %}
- spanning-tree {{ intf.spanningtree }}
-{% endif %}
-{% if intf.no_shutdown %}
- no shutdown
-{% else %}
- shutdown
-{% endif %}
-exit
-
-{% endfor %}
-
-{% if vlan_interfaces %}
-{% for svi in vlan_interfaces %}
-interface vlan {{ svi.id }}
- description {{ svi.name or svi.description }}
-{% if svi.ip_address %} ip address {{ svi.ip_address }} {{ svi.subnet_mask }}
-{% endif %} no shutdown
-exit
-
-{% endfor %}
-{% endif %}
-
-{% if loopbacks and supports_loopback %}
-{% for lb in loopbacks %}
-interface Loopback{{ lb.id }}
- description {{ lb.description }}
- ip address {{ lb.ip_address }} {{ lb.subnet_mask }}
-exit
-
-{% endfor %}
-{% endif %}
-
-{% if logging %}
-{% for host in logging.hosts %}logging host {{ host }}
-{% endfor %}logging trap {{ logging.level }}
-{% endif %}
-
-{% if ntp and ntp.servers %}
-{% for server in ntp.servers %}ntp server {{ server }}
-{% endfor %}
-{% endif %}
-
-{% if tacacs and tacacs.key %}
-{% for server in tacacs.servers or [] %}tacacs-server host {{ server }} key {{ tacacs.key }}
-{% endfor %}
-{% endif %}
-
+!
+ip domain-name {{ dns.domain_name | default('internal.local') }}
 {% if dns and dns.servers %}
-ip domain-name {{ dns.domain_name }}
 {% for dns_server in dns.servers %}
 ip name-server {{ dns_server }}
 {% endfor %}
 {% endif %}
+!
+{% if supports_ntp and ntp and ntp.servers %}
+{% for server in ntp.servers %}
+ntp server {{ server }}
+{% endfor %}
+{% endif %}
+!
+! Password & User Management
+! ==========================
+{% if supports_enable_password and enable_password %}
+enable secret {{ enable_password }}
+{% endif %}
+!
+{% if fallback_user and fallback_user.username and fallback_user_password %}
+! Configure a local fallback user for emergency access
+username {{ fallback_user.username }} privilege {{ fallback_user.privilege | default(15) }} secret {{ fallback_user_password }}
+{% endif %}
+!
+! Login Banner (MOTD)
+! ==========================
+{% if banner_text %}
+banner motd #
+{{ banner_text | replace('[HOSTNAME]', hostname) | wordwrap(70, wrapstring='\r\n# ') }}
+#
+{% endif %}
+!
+! AAA & TACACS Configuration
+! ==========================
+{% if supports_AAA and tacacs and tacacs.key and tacacs.servers %}
+aaa new-model
+!
+! Define TACACS+ server group
+tacacs-server host {{ tacacs.servers | join(' ') }} key {{ tacacs.key }}
+!
+! AAA Authentication: Use TACACS+ first, then local database as fallback.
+aaa authentication login default tacacs local
+aaa authentication enable default tacacs enable
+!
+! AAA Authorization: Use TACACS+ for command authorization.
+aaa authorization exec default tacacs local
+!
+{% else %}
+! WARNING: AAA/TACACS not configured. Check 'supports_AAA' flag and data.
+{% endif %}
+!
+! SNMPv3 Configuration (Secure)
+! ==========================
+{% if supports_SNMP and snmp and snmp.privacy_key and snmp.key %}
+! Remove insecure default communities if they exist
+no snmp-server community public
+no snmp-server community private
+!
+snmp-server location "{{ snmp.location }}"
+{% if snmp.contact %}
+snmp-server contact "{{ snmp.contact }}"
+{% endif %}
+!
+! Create SNMPv3 group with authentication (auth) and encryption (priv)
+snmp-server group SNMPv3-GROUP v3 priv
+!
+! Create SNMPv3 user and map to the group
+snmp-server user snmp-user SNMPv3-GROUP v3 auth sha {{ snmp.key }} priv aes 128 {{ snmp.privacy_key }}
+!
+{% else %}
+! INFO: SNMPv3 not configured. Check 'supports_SNMP' flag and keys.
+{% endif %}
+!
+! Spanning Tree Protocol (STP)
+! ==========================
+{% if stp and stp.enabled %}
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+! Set a high priority to ensure this switch does not become root bridge
+spanning-tree vlan 1-4094 priority {{ stp.bridge_priority | default(61440) }}
+!
+! Enable PortFast by default on all access ports for faster convergence.
+spanning-tree portfast default
+{% endif %}
+!
+! VLAN Configuration
+! ==========================
+{% if vlans %}
+{% for vlan in vlans %}
+vlan {{ vlan.id }}
+ name {{ vlan.name }}
+{% if vlan.description %}
+ description "{{ vlan.description }}"
+{% endif %}
+exit
+{% endfor %}
+{% endif %}
+!
+! Interface Configuration
+! ==========================
+{% for intf in interfaces %}
+interface {{ intf.name }}
+ description "{{ intf.description | default('Configured by Automation') }}"
+!
+{# --- L2 Configuration --- #}
+ switchport mode {{ intf.mode | default('access') }}
+{% if intf.mode == "access" %}
+ switchport access vlan {{ intf.vlan }}
+{% elif intf.mode == "trunk" %}
+{# This block robustly handles allowed_vlans as either a string or a list #}
+{% if intf.allowed_vlans is string %}
+ switchport trunk allowed vlan {{ intf.allowed_vlans }}
+{% elif intf.allowed_vlans is iterable %}
+ switchport trunk allowed vlan {{ intf.allowed_vlans | join(',') }}
+{% endif %}
+{% endif %}
+!
+{# --- L3 Configuration (optional) --- #}
+{% if intf.ip_address %}
+ ip address {{ intf.ip_address }} {{ intf.subnet_mask }}
+{% endif %}
+!
+{# --- Spanning Tree --- #}
+{% if intf.spanningtree == "portfast" %}
+ spanning-tree portfast
+{% elif intf.spanningtree == "bpduguard_enable" %}
+ spanning-tree bpduguard enable
+{% elif intf.spanningtree == "none" %}
+ no spanning-tree
+{% endif %}
+!
+{# --- Optional Physical Layer Settings --- #}
+{% if intf.mtu %}
+ mtu {{ intf.mtu }}
+{% endif %}
+{% if intf.speed %}
+ speed {{ intf.speed }}
+{% endif %}
+{% if intf.duplex %}
+ duplex {{ intf.duplex }}
+{% endif %}
+{% if intf.flow_control %}
+ flowcontrol {{ intf.flow_control }}
+{% endif %}
+{% if intf.poe %}
+ power inline {{ intf.poe }}
+{% endif %}
+!
+{# --- Simplified Port Status --- #}
+{% if intf.enabled %}
+ no shutdown
+{% else %}
+ shutdown
+{% endif %}
+!
+{% endfor %}
+!
+! Switched Virtual Interfaces (SVIs)
+! ==========================
+{% if supports_vlan_interface and vlan_interfaces %}
+{% for svi in vlan_interfaces %}
+interface vlan {{ svi.id }}
+ description "{{ svi.name or svi.description }}"
+{% if svi.ip_address %}
+ ip address {{ svi.ip_address }} {{ svi.subnet_mask }}
+{% endif %}
+ no shutdown
+!
+{% endfor %}
+{% endif %}
+!
+! Loopback Interfaces
+! ==========================
+{% if supports_loopback and loopbacks %}
+{% for lb in loopbacks %}
+interface Loopback{{ lb.id }}
+ description "{{ lb.description }}"
+ ip address {{ lb.ip_address }} {{ lb.subnet_mask }}
+!
+{% endfor %}
+{% endif %}
+!
+! Logging Configuration
+! ==========================
+{% if supports_logging and logging and logging.hosts %}
+{% for host in logging.hosts %}
+logging host {{ host }}
+{% endfor %}
+logging trap {{ logging.level | default('informational') }}
+{% endif %}
+!
+! Final Commands
+! ==========================
+end
+write memory
+!
+! End of Configuration
+!

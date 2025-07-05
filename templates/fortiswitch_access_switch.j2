@@ -3,7 +3,7 @@
 config system global
     set hostname {{ hostname }}
 end
-
+!
 {% if enable_password %}
 config system admin
     edit "admin"
@@ -11,13 +11,13 @@ config system admin
     next
 end
 {% endif %}
-
+!
 {% if snmp.location %}
 config system snmp sysinfo
     set location "{{ snmp.location }}"
 end
 {% endif %}
-
+!
 {% if snmp %}
 config system snmp community
     edit 1
@@ -29,14 +29,29 @@ config system snmp community
     next
 end
 {% endif %}
-
+!
 {% if stp.enabled %}
 config switch stp-settings
     set status enable
     set bridge-priority {{ stp.bridge_priority | default(32768) }}
 end
 {% endif %}
-
+!
+{# === VLANs === #}
+{% for vlan in vlans %}
+config switch vlan
+    edit "{{ vlan.name }}"
+        set vlanid {{ vlan.id }}
+        set description "{{ vlan.description }}"
+        {% if vlan.untagged %}
+        set untagged "{{ vlan.untagged }}"
+        {% endif %}
+        {% if vlan.tagged %}
+        set tagged "{{ vlan.tagged | join(', ') }}"
+        {% endif %}
+    next
+end
+{% endfor %}
 {# === INTERFACES === #}
 {% for iface in interfaces %}
 config switch interface
@@ -57,7 +72,7 @@ config switch interface
     next
 end
 {% endfor %}
-
+!
 {# === VLAN INTERFACES === #}
 {% for vlan_if in vlan_interfaces %}
 config system interface
@@ -70,7 +85,7 @@ config system interface
     next
 end
 {% endfor %}
-
+!
 {# === TACACS === #}
 {% if tacacs and tacacs.servers and tacacs.key %}
 config system tacacs+
@@ -80,7 +95,7 @@ config system tacacs+
     next
 end
 {% endif %}
-
+!
 {# === NTP === #}
 {% if ntp.servers %}
 config system ntp
@@ -90,7 +105,7 @@ config system ntp
     {% endfor %}
 end
 {% endif %}
-
+!
 {# === SYSLOG === #}
 {% if logging.hosts %}
 config log syslogd setting
