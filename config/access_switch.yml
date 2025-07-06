@@ -1,35 +1,39 @@
 # ===================================================================
-# Golden Template för Access Switch
+# Golden Template for Access Switch
 #
-# Denna fil definierar exakt hur en standard access-switch ska se ut,
-# inklusive alla VLANs, interface, och standardinställningar.
+# This file defines the exact standard configuration for an access switch,
+# including all VLANs, interfaces, and default settings.
 # ===================================================================
 
-# --- Standardinställningar för Spanning Tree ---
+# --- Default Spanning Tree Settings ---
 stp:
   enabled: true
   bridge_priority: 32768
 
-# --- Standardkapabiliteter ---
+# --- Default Capabilities ---
 supports_loopback: false
 
-# --- Standard-DNS och Logging (kan överlagras) ---
+# --- Default DNS and Logging (can be overridden) ---
 dns:
   servers:
-    - "x.x.x.x"  # Ange DNS-server IP-adresser här
-    - "x.x.x.x"
+    - "8.8.8.8"  # Enter DNS server IP addresses here
+    - "1.1.1.1"
 logging:
   hosts:
-    - "10.x.x.x"  # Ange loggserver IP-adress här
+    - "10.10.0.50"  # Enter log server IP address here
   level: informational
-# --- Standard-Tidssynkronisering ---
 
-# --- Standard-SNMP (nycklar måste anges i input-filen) ---
+# --- Default Time Synchronization (NTP) ---
+# ntp:
+#   servers:
+#     - "pool.ntp.org"
+
+# --- Default SNMP (keys must be provided in the input file) ---
 snmp:
   location: "Default Location"
-  contact: "noc@min-doman.local"
+  contact: "noc@example.com"
 
-# --- Standard-VLANs ---
+# --- Default VLANs ---
 vlans:
   - id: 10
     name: Users
@@ -42,43 +46,43 @@ vlans:
   - id: 999
     name: Parking-Lot
 
-# --- Standard Interface-konfiguration ---
+# --- Default Interface Configuration ---
 interfaces:
   - name: "TenGigabitEthernet 1/0/1"
     description: "Access Port - Users VLAN"
     mode: access
     vlan: 10
-    no_shutdown: true
+    enabled: true
     spanningtree: "portfast"
   - name: "TenGigabitEthernet 1/0/2"
     description: "Trunk to Wireless AP"
     mode: trunk
     allowed_vlans: "10,50"
-    no_shutdown: true
+    enabled: true
     spanningtree: "bpduguard_enable"
   - name: "TenGigabitEthernet 1/0/48"
     description: "Uplink to Core"
     mode: trunk
     allowed_vlans: "10,20,30,50"
-    no_shutdown: true
+    enabled: true
     spanningtree: "none"
-  - POE: true
-    name: "TenGigabitEthernet 1/0/3"
-    description: "Access Port - Users VLAN"
+  - name: "TenGigabitEthernet 1/0/3"
+    description: "Access Port - VoIP Phones"
     mode: access
-    vlan: 10
-    no_shutdown: true
+    vlan: 10 # Assuming data vlan is 10, voice vlan would be handled by voice vlan command
+    enabled: true
     spanningtree: "portfast"
+    poe: "enable" # Use 'poe: enable' or similar based on template
   - name: "TenGigabitEthernet 1/0/24"
     description: "Parking Lot"
     mode: access
     vlan: 999
-    no_shutdown: false
+    enabled: false
     spanningtree: "portfast"
 
-# --- Standard SVI (Management Interface) ---
+# --- Default SVI (Management Interface) ---
 vlan_interfaces:
   - id: 30
     name: "Management Interface"
-    ip_address: "10.x.x.x" # Notera: Denna IP kommer vara samma för alla!
+    ip_address: "10.10.30.5" # Note: This IP will be the same for all devices!
     subnet_mask: "255.255.255.0"

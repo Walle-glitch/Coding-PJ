@@ -1,23 +1,23 @@
 # ===================================================================
-# Golden Template för Core Switch
+# Golden Template for Core Switch
 #
-# Denna fil definierar exakt hur en standard core-switch ska se ut,
-# inklusive VLANs, L3-interface, loopbacks och routing-protokoll.
+# This file defines the exact standard configuration for a core switch,
+# including VLANs, L3 interfaces, loopbacks, and routing protocols.
 # ===================================================================
 
-# --- Standardkapabiliteter ---
+# --- Default Capabilities ---
 supports_vlan_interface: true
 supports_loopback: true
 supports_ospf: true
 supports_bgp: true
 
-# --- Standardinställningar för Spanning Tree ---
-# Låg prioritet för att säkerställa att denna switch blir root bridge.
+# --- Default Spanning Tree Settings ---
+# Low priority to ensure this switch becomes the root bridge.
 stp:
   enabled: true
   bridge_priority: 4096
 
-# --- Standard-VLANs som ska finnas på core-nivå ---
+# --- Default VLANs to be present at the core level ---
 vlans:
   - id: 10
     name: Users
@@ -32,41 +32,41 @@ vlans:
   - id: 100
     name: Core-Transit
 
-# --- Standard Interface-konfiguration ---
-# Exempel på vanliga interface-typer på en core-switch
+# --- Default Interface Configuration ---
+# Examples of common interface types on a core switch
 interfaces:
   - name: "TenGigabitEthernet 1/0/1"
-    description: "L3 Länk till Router-01"
-    mode: none # Indikerar ett L3-interface
+    description: "L3 Link to Router-01"
+    mode: none # Indicates an L3 interface
     ip_address: "10.100.0.1"
     subnet_mask: "255.255.255.252"
     enabled: true
 
   - name: "TenGigabitEthernet 1/0/2"
-    description: "L3 Länk till Router-02"
+    description: "L3 Link to Router-02"
     mode: none
     ip_address: "10.100.0.5"
     subnet_mask: "255.255.255.252"
     enabled: true
 
   - name: "TenGigabitEthernet 1/0/10"
-    description: "Trunk till Distribution-Switch-01"
+    description: "Trunk to Distribution-Switch-01"
     mode: trunk
     allowed_vlans: "10,20,30,40,50"
     enabled: true
-    spanningtree: "none" # BPDU-skydd är oftast avstängt mellan switchar
+    spanningtree: "none" # BPDU guard is usually disabled between switches
 
-# --- Standard Loopback-interface ---
-# Används ofta för router-ID och management
+# --- Default Loopback Interface ---
+# Often used for router-ID and management
 loopbacks:
   - id: 0
-    description: "Router-ID och Management"
-    # Den unika IP-adressen sätts i den specifika enhetsfilen
+    description: "Router-ID and Management"
+    # The unique IP address is set in the specific device file
     ip_address: "10.0.0.1"
     subnet_mask: "255.255.255.255"
 
-# --- Standard Switched Virtual Interfaces (SVIs) ---
-# Dessa agerar som default gateway för sina respektive VLAN
+# --- Default Switched Virtual Interfaces (SVIs) ---
+# These act as the default gateway for their respective VLANs
 vlan_interfaces:
   - id: 10
     description: "GW Users VLAN"

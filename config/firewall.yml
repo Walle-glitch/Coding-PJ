@@ -1,21 +1,21 @@
 # ===================================================================
-# Golden Template för FortiGate Firewall
+# Golden Template for FortiGate Firewall
 #
-# Denna fil definierar en standardkonfiguration för en brandvägg,
-# inklusive interface, zoner, adresser och grundläggande policys.
+# This file defines a standard configuration for a firewall,
+# including interfaces, zones, addresses, and basic policies.
 # ===================================================================
 
-# --- Standardkapabiliteter ---
+# --- Default Capabilities ---
 supports_vlan_interface: true
 supports_loopback: true
 supports_ospf: true
 supports_bgp: true
 
-# --- Standard Interface-konfiguration ---
+# --- Default Interface Configuration ---
 interfaces:
   - name: "wan1"
     description: "Primary Internet"
-    # IP-adressen sätts oftast via DHCP eller i den specifika enhetsfilen
+    # The IP address is usually set via DHCP or in the specific device file
     ip_address: "192.168.1.2"
     subnet_mask: "255.255.255.0"
     allowaccess:
@@ -39,7 +39,7 @@ interfaces:
     allowaccess:
       - "ping"
 
-# --- Standard Zon-konfiguration ---
+# --- Default Zone Configuration ---
 zones:
   - name: "untrust"
     interfaces:
@@ -51,7 +51,7 @@ zones:
     interfaces:
       - "dmz"
 
-# --- Standard Adressobjekt ---
+# --- Default Address Objects ---
 firewall_addresses:
   - name: "RFC1918-10.0.0.0"
     subnet: "10.0.0.0 255.0.0.0"
@@ -59,15 +59,15 @@ firewall_addresses:
     subnet: "172.16.0.0 255.240.0.0"
   - name: "RFC1918-192.168.0.0"
     subnet: "192.168.0.0 255.255.0.0"
-  - name: "ALL" # FortiGates standardobjekt för 0.0.0.0/0
+  - name: "ALL" # FortiGate's default object for 0.0.0.0/0
     subnet: "0.0.0.0 0.0.0.0"
 
-# --- Standard Statisk Route (Default Route) ---
+# --- Default Static Route (Default Route) ---
 static_routes:
-  - gateway: "192.168.1.1" # Gateway-IP för WAN-interfacet
+  - gateway: "192.168.1.1" # Gateway IP for the WAN interface
     device: "wan1"
 
-# --- Standard Brandväggspolicys ---
+# --- Default Firewall Policies ---
 firewall_policies:
   - id: 1
     name: "LAN-to-WAN"
