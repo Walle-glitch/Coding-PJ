@@ -1,89 +1,82 @@
-vendor: Cisco, Juniper, Arista, Fortinet, Dell
-template_style: Core_switch
-interface_prefix: TenGigabitEthernet, GigabitEthernet, port-channel, Ethernet, FastEthernet, TenGigabitEthernet,
-  GigabitEthernet, TenGigE, GigE, Te, Gi, Fa, Po, port, xe-
+# ===================================================================
+# Golden Template för Core Switch
+#
+# Denna fil definierar exakt hur en standard core-switch ska se ut,
+# inklusive VLANs, L3-interface, loopbacks och routing-protokoll.
+# ===================================================================
+
+# --- Standardkapabiliteter ---
 supports_vlan_interface: true
 supports_loopback: true
-supports_enable_password: true
-supports_SNMP: true
-supports_AAA: true
-supports_ssh: true
-supports_https: true
-supports_telnet: false
 supports_ospf: true
-supports_tacacs: true
-supports_radius: false
-supports_acl: true
-supports_logging: true
-supports_ntp: true
-supports_dhcp: false
 supports_bgp: true
 
+# --- Standardinställningar för Spanning Tree ---
+# Låg prioritet för att säkerställa att denna switch blir root bridge.
 stp:
   enabled: true
-  core_priority: 4096
+  bridge_priority: 4096
 
+# --- Standard-VLANs som ska finnas på core-nivå ---
+vlans:
+  - id: 10
+    name: Users
+  - id: 20
+    name: Servers
+  - id: 30
+    name: Management
+  - id: 40
+    name: VoIP
+  - id: 50
+    name: Wireless
+  - id: 100
+    name: Core-Transit
+
+# --- Standard Interface-konfiguration ---
+# Exempel på vanliga interface-typer på en core-switch
 interfaces:
-  - name: Access_VLAN_Port
-    description: Access VLAN port
-    mode: access
-    vlan: 10
-    no_shutdown: true
-    spanningtree: portfast
-    EEE: False
+  - name: "TenGigabitEthernet 1/0/1"
+    description: "L3 Länk till Router-01"
+    mode: none # Indikerar ett L3-interface
+    ip_address: "10.100.0.1"
+    subnet_mask: "255.255.255.252"
+    enabled: true
 
-  - name: Trunk_to_AP
-    description: Trunk to AP
+  - name: "TenGigabitEthernet 1/0/2"
+    description: "L3 Länk till Router-02"
+    mode: none
+    ip_address: "10.100.0.5"
+    subnet_mask: "255.255.255.252"
+    enabled: true
+
+  - name: "TenGigabitEthernet 1/0/10"
+    description: "Trunk till Distribution-Switch-01"
     mode: trunk
-    allowed_vlans: 10,20
-    no_shutdown: true
-    spanningtree: true
-    EEE: False
+    allowed_vlans: "10,20,30,40,50"
+    enabled: true
+    spanningtree: "none" # BPDU-skydd är oftast avstängt mellan switchar
 
-  - name: Uplink_to_Core
-    description: Uplink to Core
-    mode: trunk
-    allowed_vlans: 10,20,30
-    no_shutdown: true
-    spanningtree: none
-    EEE: False
-
-  - name: Parking_Lot
-    description: Parking Lot
-    mode: access
-    vlan: 999
-    no_shutdown: false
-    spanningtree: none
-    EEE: False
-
+# --- Standard Loopback-interface ---
+# Används ofta för router-ID och management
 loopbacks:
   - id: 0
-    description: Loopback Interface
-    ip_address: 10.0.0.1
-    subnet_mask: 255.255.255.255
+    description: "Router-ID och Management"
+    # Den unika IP-adressen sätts i den specifika enhetsfilen
+    ip_address: "10.0.0.1"
+    subnet_mask: "255.255.255.255"
 
+# --- Standard Switched Virtual Interfaces (SVIs) ---
+# Dessa agerar som default gateway för sina respektive VLAN
 vlan_interfaces:
   - id: 10
-    description: Users VLAN
-    ip_address: 10.x.x.x
-    subnet_mask: 255.255.255.0
+    description: "GW Users VLAN"
+    ip_address: "10.10.10.1"
+    subnet_mask: "255.255.255.0"
   - id: 20
-    description: Servers VLAN
-    ip_address: 10.x.x.x
-    subnet_mask: 255.255.255.0
+    description: "GW Servers VLAN"
+    ip_address: "10.10.20.1"
+    subnet_mask: "255.255.255.0"
   - id: 30
-    description: Management VLAN
-    ip_address: 10.x.x.x
-    subnet_mask: 255.255.255.0
-  - id: 40
-    description: VoIP VLAN
-    ip_address: 10.x.x.x
-    subnet_mask: 255.255.255.0
-  - id: 50
-    description: Wireless VLAN
-    ip_address: 10.x.x.x
-    subnet_mask: 255.255.255.0
-  - id: 60
-    description: Parking Lot VLAN
-    ip_address: 10.x.x.x
-    subnet_mask: 255.255.255.0
+    description: "GW Management VLAN"
+    ip_address: "10.10.30.1"
+    subnet_mask: "255.255.255.0"

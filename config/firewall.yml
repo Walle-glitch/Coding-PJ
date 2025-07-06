@@ -1,0 +1,117 @@
+# ===================================================================
+# Golden Template för FortiGate Firewall
+#
+# Denna fil definierar en standardkonfiguration för en brandvägg,
+# inklusive interface, zoner, adresser och grundläggande policys.
+# ===================================================================
+
+# --- Standardkapabiliteter ---
+supports_vlan_interface: true
+supports_loopback: true
+supports_ospf: true
+supports_bgp: true
+
+# --- Standard Interface-konfiguration ---
+interfaces:
+  - name: "wan1"
+    description: "Primary Internet"
+    # IP-adressen sätts oftast via DHCP eller i den specifika enhetsfilen
+    ip_address: "192.168.1.2"
+    subnet_mask: "255.255.255.0"
+    allowaccess:
+      - "ping"
+      - "https"
+      - "ssh"
+
+  - name: "internal"
+    description: "Internal LAN"
+    ip_address: "10.10.10.1"
+    subnet_mask: "255.255.255.0"
+    allowaccess:
+      - "ping"
+      - "https"
+      - "ssh"
+
+  - name: "dmz"
+    description: "DMZ Network"
+    ip_address: "172.16.1.1"
+    subnet_mask: "255.255.255.0"
+    allowaccess:
+      - "ping"
+
+# --- Standard Zon-konfiguration ---
+zones:
+  - name: "untrust"
+    interfaces:
+      - "wan1"
+  - name: "trust"
+    interfaces:
+      - "internal"
+  - name: "dmz"
+    interfaces:
+      - "dmz"
+
+# --- Standard Adressobjekt ---
+firewall_addresses:
+  - name: "RFC1918-10.0.0.0"
+    subnet: "10.0.0.0 255.0.0.0"
+  - name: "RFC1918-172.16.0.0"
+    subnet: "172.16.0.0 255.240.0.0"
+  - name: "RFC1918-192.168.0.0"
+    subnet: "192.168.0.0 255.255.0.0"
+  - name: "ALL" # FortiGates standardobjekt för 0.0.0.0/0
+    subnet: "0.0.0.0 0.0.0.0"
+
+# --- Standard Statisk Route (Default Route) ---
+static_routes:
+  - gateway: "192.168.1.1" # Gateway-IP för WAN-interfacet
+    device: "wan1"
+
+# --- Standard Brandväggspolicys ---
+firewall_policies:
+  - id: 1
+    name: "LAN-to-WAN"
+    srcintf:
+      - "internal"
+    dstintf:
+      - "wan1"
+    srcaddr:
+      - "RFC1918-10.0.0.0"
+    dstaddr:
+      - "ALL"
+    action: "accept"
+    service:
+      - "ALL"
+    nat: true
+
+  - id: 2
+    name: "DMZ-to-WAN"
+    srcintf:
+      - "dmz"
+    dstintf:
+      - "wan1"
+    srcaddr:
+      - "RFC1918-172.16.0.0"
+    dstaddr:
+      - "ALL"
+    action: "accept"
+    service:
+      - "HTTP"
+      - "HTTPS"
+      - "DNS"
+    nat: true
+
+  - id: 10
+    name: "Default-Deny"
+    srcintf:
+      - "any"
+    dstintf:
+      - "any"
+    srcaddr:
+      - "ALL"
+    dstaddr:
+      - "ALL"
+    action: "deny"
+    service:
+      - "ALL"
+    nat: false

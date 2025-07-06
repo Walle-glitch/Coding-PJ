@@ -1,0 +1,165 @@
+{#
+  Jinja2 Template for FortiGate Firewall (FortiOS)
+  Version: 1.0
+  Focus: Interfaces, Zones, Address Objects, and Firewall Policies.
+#}
+# Grundläggande systemkonfiguration
+config system global
+    set hostname "{{ hostname }}"
+end
+!
+# NTP-konfiguration
+{% if supports_ntp and ntp and ntp.servers %}
+config system ntp
+    set ntpsync enable
+    set type custom
+    config ntpserver
+        edit 1
+            set server "{{ ntp.servers[0] }}"
+        next
+    {% if ntp.servers[1] %}
+        edit 2
+            set server "{{ ntp.servers[1] }}"
+        next
+    {% endif %}
+    end
+end
+{% endif %}
+!
+# DNS-konfiguration
+{% if dns and dns.servers %}
+config system dns
+    set primary {{ dns.servers[0] }}
+    {% if dns.servers[1] %}
+    set secondary {{ dns.servers[1] }}
+    {% endif %}
+end
+{% endif %}
+!
+# Lokal fallback-användare
+{% if fallback_user and fallback_user.username and fallback_user_password %}
+config system admin
+    edit "{{ fallback_user.username }}"
+        set accprofile "super_admin"
+        set password {{ fallback_user_password }}
+    next
+end
+{% endif %}
+!
+# TACACS+ Konfiguration
+{% if supports_AAA and tacacs and tacacs.key and tacacs.servers %}
+config user tacacs+
+    edit "TACACS_Group"
+        set authen-type auto
+        set key "{{ tacacs.key }}"
+        set server "{{ tacacs.servers | join(' ') }}"
+    next
+end
+config system admin
+    edit "tacacs_admins"
+        set accprofile "super_admin"
+        set usergrp "TACACS_Group"
+        set wildard enable
+    next
+end
+{% endif %}
+!
+# SNMPv3 Konfiguration
+{% if supports_SNMP and snmp and snmp.privacy_key and snmp.key %}
+config system snmp sysinfo
+    set status enable
+    {% if snmp.location %}
+    set location "{{ snmp.location }}"
+    {% endif %}
+    {% if snmp.contact %}
+    set contact "{{ snmp.contact }}"
+    {% endif %}
+end
+config system snmp user
+    edit "snmp-user"
+        set security-level auth-priv
+        set auth-proto sha
+        set auth-pwd "{{ snmp.key }}"
+        set priv-proto aes
+        set priv-pwd "{{ snmp.privacy_key }}"
+    next
+end
+{% endif %}
+!
+# Interface Konfiguration
+config system interface
+{% for intf in interfaces %}
+    edit "{{ intf.name }}"
+        set alias "{{ intf.description | default(intf.name) }}"
+        set ip {{ intf.ip_address }} {{ intf.subnet_mask }}
+        {% if intf.allowaccess %}
+        set allowaccess {{ intf.allowaccess | join(' ') }}
+        {% endif %}
+        {% if intf.vdom %}
+        set vdom {{ intf.vdom | default("root") }}
+        {% endif %}
+    next
+{% endfor %}
+end
+!
+# Zon-konfiguration
+config system zone
+{% if zones %}
+{% for zone in zones %}
+    edit "{{ zone.name }}"
+        {% if zone.interfaces %}
+        set interface {{ zone.interfaces | join(' ') }}
+        {% endif %}
+    next
+{% endfor %}
+{% endif %}
+end
+!
+# Adressobjekt
+config firewall address
+{% if firewall_addresses %}
+{% for addr in firewall_addresses %}
+    edit "{{ addr.name }}"
+        set subnet {{ addr.subnet }}
+    next
+{% endfor %}
+{% endif %}
+end
+!
+# Statisk routing
+config router static
+{% if static_routes %}
+{% for route in static_routes %}
+    edit {{ loop.index }}
+        set gateway {{ route.gateway }}
+        set device "{{ route.device }}"
+    next
+{% endfor %}
+{% endif %}
+end
+!
+# Brandväggspolicys
+config firewall policy
+{% if firewall_policies %}
+{% for policy in firewall_policies %}
+    edit {{ policy.id | default(loop.index) }}
+        set name "{{ policy.name }}"
+        set srcintf "{{ policy.srcintf | join(' ') }}"
+        set dstintf "{{ policy.dstintf | join(' ') }}"
+        set srcaddr "{{ policy.srcaddr | join(' ') }}"
+        set dstaddr "{{ policy.dstaddr | join(' ') }}"
+        set action {{ policy.action | default('deny') }}
+        set service "{{ policy.service | join(' ') }}"
+        set schedule "always"
+        {% if policy.nat %}
+        set nat enable
+        {% else %}
+        set nat disable
+        {% endif %}
+    next
+{% endfor %}
+{% endif %}
+end
+!
+# Spara konfigurationen
+end

@@ -1,0 +1,137 @@
+{#
+  Jinja2 Template for FortiSwitch (FortiOS)
+  Version: 1.0
+  Focus: FortiSwitch specific syntax for VLANs, Interfaces, and System settings.
+#}
+# Grundläggande systemkonfiguration
+config system global
+    set hostname "{{ hostname }}"
+end
+!
+# NTP-konfiguration
+{% if supports_ntp and ntp and ntp.servers %}
+config system ntp
+    set ntpsync enable
+    set type custom
+    config ntpserver
+        edit 1
+            set server "{{ ntp.servers[0] }}"
+        next
+    {% if ntp.servers[1] %}
+        edit 2
+            set server "{{ ntp.servers[1] }}"
+        next
+    {% endif %}
+    end
+end
+{% endif %}
+!
+# DNS-konfiguration
+{% if dns and dns.servers %}
+config system dns
+    set primary {{ dns.servers[0] }}
+    {% if dns.servers[1] %}
+    set secondary {{ dns.servers[1] }}
+    {% endif %}
+end
+{% endif %}
+!
+# Lokal fallback-användare
+{% if fallback_user and fallback_user.username and fallback_user_password %}
+config system admin
+    edit "{{ fallback_user.username }}"
+        set accprofile "super_admin"
+        set password {{ fallback_user_password }}
+    next
+end
+{% endif %}
+!
+# TACACS+ Konfiguration
+{% if supports_AAA and tacacs and tacacs.key and tacacs.servers %}
+config user tacacs+
+    edit "TACACS_Group"
+        set authen-type auto
+        set key "{{ tacacs.key }}"
+        set server "{{ tacacs.servers | join(' ') }}"
+    next
+end
+config system admin
+    edit "tacacs_admins"
+        set accprofile "super_admin"
+        set usergrp "TACACS_Group"
+        set wildard enable
+    next
+end
+{% endif %}
+!
+# SNMPv3 Konfiguration
+{% if supports_SNMP and snmp and snmp.privacy_key and snmp.key %}
+config system snmp sysinfo
+    set status enable
+    {% if snmp.location %}
+    set location "{{ snmp.location }}"
+    {% endif %}
+    {% if snmp.contact %}
+    set contact "{{ snmp.contact }}"
+    {% endif %}
+end
+config system snmp user
+    edit "snmp-user"
+        set security-level auth-priv
+        set auth-proto sha
+        set auth-pwd "{{ snmp.key }}"
+        set priv-proto aes
+        set priv-pwd "{{ snmp.privacy_key }}"
+    next
+end
+{% endif %}
+!
+# Spanning Tree Konfiguration
+{% if stp and stp.enabled %}
+config switch stp setting
+    set priority {{ stp.bridge_priority | default(32768) }}
+end
+{% endif %}
+!
+# VLAN Konfiguration
+config switch vlan
+{% if vlans %}
+{% for vlan in vlans %}
+    edit {{ vlan.id }}
+        set name "{{ vlan.name }}"
+    next
+{% endfor %}
+{% endif %}
+end
+!
+# Interface Konfiguration
+config switch interface
+{% for intf in interfaces %}
+    edit "{{ intf.name }}"
+        # Port status
+        {% if intf.enabled %}
+        set status up
+        {% else %}
+        set status down
+        {% endif %}
+        # L2 Configuration
+        {% if intf.mode == "access" %}
+        set native-vlan {{ intf.vlan }}
+        {% elif intf.mode == "trunk" %}
+        set allowed-vlans {{ intf.allowed_vlans }}
+        {% endif %}
+        # Spanning Tree port settings
+        {% if intf.spanningtree == "portfast" %}
+        set stp-state enabled
+        set edge-port enabled
+        {% elif intf.spanningtree == "bpduguard_enable" %}
+        set stp-bpdu-guard enabled
+        {% elif intf.spanningtree == "none" %}
+        set stp-state disabled
+        {% endif %}
+    next
+{% endfor %}
+end
+!
+# Spara konfigurationen
+end
